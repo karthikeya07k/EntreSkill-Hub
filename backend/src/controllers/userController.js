@@ -4,10 +4,28 @@ const Progress = require("../models/Progress");
 const Roadmap = require("../models/Roadmap");
 
 const updateProfileValidation = [
-  body("name").optional().trim().notEmpty().withMessage("Name must not be empty."),
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 80 })
+    .withMessage("Name must be 2-80 characters."),
+  body("location")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 120 })
+    .withMessage("Location must be 2-120 characters."),
+  body("bio").optional().isLength({ max: 1000 }).withMessage("Bio must be up to 1000 characters."),
   body("skills").optional().isArray().withMessage("Skills must be an array."),
   body("interests").optional().isArray().withMessage("Interests must be an array."),
-  body("expertise").optional().isArray().withMessage("Expertise must be an array.")
+  body("expertise").optional().isArray().withMessage("Expertise must be an array."),
+  body("experienceYears")
+    .optional()
+    .isInt({ min: 0, max: 60 })
+    .withMessage("experienceYears must be between 0 and 60."),
+  body("availability")
+    .optional()
+    .isLength({ min: 3, max: 120 })
+    .withMessage("Availability must be 3-120 characters.")
 ];
 
 const getProfile = async (req, res, next) => {
@@ -32,10 +50,16 @@ const updateProfile = async (req, res, next) => {
       "availability"
     ];
     const updates = {};
+    const normalizeStringArray = (items) =>
+      [...new Set(items.map((item) => String(item).trim()).filter(Boolean))];
 
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
+        if (["skills", "interests", "expertise"].includes(field) && Array.isArray(req.body[field])) {
+          updates[field] = normalizeStringArray(req.body[field]);
+        } else {
+          updates[field] = req.body[field];
+        }
       }
     });
 

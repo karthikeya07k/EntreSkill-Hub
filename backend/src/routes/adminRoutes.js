@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   getAdminStats,
+  getMentorApplications,
   getPlatformFeedback,
   getUsers,
   updateMentorVerification,
@@ -16,6 +17,7 @@ router.use(protect, authorizeRoles("admin"));
 
 router.get("/users", getUsers);
 router.get("/stats", getAdminStats);
+router.get("/mentor-applications", getMentorApplications);
 router.get("/feedback", getPlatformFeedback);
 router.patch("/mentors/:userId/verify", verifyMentorValidation, validate, updateMentorVerification);
 

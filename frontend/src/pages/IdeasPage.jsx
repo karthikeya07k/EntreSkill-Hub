@@ -11,6 +11,11 @@ const IdeaCard = ({ idea, isRecommended, isBookmarked, onBookmark, onOpenRoadmap
     )}
     <h3 className="text-lg font-semibold text-slate-900">{idea.title}</h3>
     <p className="mt-2 text-sm text-slate-600">{idea.description}</p>
+    {typeof idea.matchScore === "number" && (
+      <p className="mt-2 text-xs font-semibold text-brand-700">
+        Match Score: {idea.matchScore}% ({idea.fitLevel})
+      </p>
+    )}
 
     <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
       <div className="rounded-md bg-slate-100 px-2 py-1">Category: {idea.category}</div>
@@ -26,6 +31,18 @@ const IdeaCard = ({ idea, isRecommended, isBookmarked, onBookmark, onOpenRoadmap
         </span>
       ))}
     </div>
+
+    {isRecommended && (
+      <div className="mt-3 rounded-md bg-slate-50 p-3 text-xs text-slate-700">
+        <p className="font-semibold">Why this is recommended:</p>
+        <p className="mt-1">{idea.recommendationSummary}</p>
+        {!!idea.matchedSkills?.length && <p className="mt-1">Matched skills: {idea.matchedSkills.join(", ")}</p>}
+        {!!idea.matchedInterests?.length && (
+          <p className="mt-1">Matched interests: {idea.matchedInterests.join(", ")}</p>
+        )}
+        {!!idea.missingSkills?.length && <p className="mt-1">Skills to build next: {idea.missingSkills.join(", ")}</p>}
+      </div>
+    )}
 
     <div className="mt-5 flex flex-wrap gap-2">
       <button
@@ -69,7 +86,7 @@ const IdeasPage = () => {
       setRecommended(recRes.data.recommendations || []);
       setBookmarks(bookmarkRes.data.bookmarks || []);
     } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to load business ideas.");
+      setMessage(error.response?.data?.message || error.message || "Unable to load business ideas.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +101,7 @@ const IdeasPage = () => {
       await api.post("/users/bookmarks/toggle", { ideaId });
       await loadIdeas();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to update bookmark.");
+      setMessage(error.response?.data?.message || error.message || "Unable to update bookmark.");
     }
   };
 
@@ -110,7 +127,11 @@ const IdeasPage = () => {
         </p>
       </div>
 
-      {message && <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">{message}</p>}
+      {message && (
+        <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700" role="status" aria-live="polite">
+          {message}
+        </p>
+      )}
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Top Matches For You</h2>

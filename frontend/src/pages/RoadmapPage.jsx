@@ -5,6 +5,7 @@ import api from "../services/api";
 const RoadmapPage = () => {
   const { roadmapId } = useParams();
   const [roadmap, setRoadmap] = useState(null);
+  const [insights, setInsights] = useState(null);
   const [progress, setProgress] = useState({
     completedStepOrders: [],
     completionPercent: 0
@@ -13,6 +14,15 @@ const RoadmapPage = () => {
   const [message, setMessage] = useState("");
 
   const completedSet = useMemo(() => new Set(progress.completedStepOrders || []), [progress.completedStepOrders]);
+
+  const loadInsights = async () => {
+    try {
+      const { data } = await api.get(`/roadmaps/${roadmapId}/insights`);
+      setInsights(data);
+    } catch (error) {
+      setInsights(null);
+    }
+  };
 
   const loadRoadmap = async () => {
     setLoading(true);
@@ -23,8 +33,9 @@ const RoadmapPage = () => {
       ]);
       setRoadmap(roadmapRes.data.roadmap);
       setProgress(progressRes.data.progress);
+      await loadInsights();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to load roadmap.");
+      setMessage(error.response?.data?.message || error.message || "Unable to load roadmap.");
     } finally {
       setLoading(false);
     }
@@ -41,8 +52,9 @@ const RoadmapPage = () => {
         completed: !currentlyCompleted
       });
       setProgress(data.progress);
+      await loadInsights();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to update progress.");
+      setMessage(error.response?.data?.message || error.message || "Unable to update progress.");
     }
   };
 
@@ -83,7 +95,61 @@ const RoadmapPage = () => {
         </div>
       </div>
 
-      {message && <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">{message}</p>}
+      {message && (
+        <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700" role="status" aria-live="polite">
+          {message}
+        </p>
+      )}
+
+      {insights && (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Roadmap Intelligence</h2>
+          <p className="mt-1 text-sm text-slate-600">{insights.summary}</p>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md bg-slate-100 px-3 py-2 text-sm">
+              Remaining steps: <span className="font-semibold">{insights.remainingSteps}</span>
+            </div>
+            <div className="rounded-md bg-slate-100 px-3 py-2 text-sm">
+              Est. days left: <span className="font-semibold">{insights.estimatedDaysToComplete}</span>
+            </div>
+            <div className="rounded-md bg-slate-100 px-3 py-2 text-sm">
+              Completion: <span className="font-semibold">{insights.completionPercent}%</span>
+            </div>
+          </div>
+
+          {insights.nextStep && (
+            <div className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm text-slate-700">
+              <p className="font-semibold text-brand-800">
+                Next best step: {insights.nextStep.order}. {insights.nextStep.title}
+              </p>
+              <p className="mt-1">{insights.nextStep.description}</p>
+              {!!insights.skillGaps?.length && (
+                <p className="mt-2 text-xs text-brand-900">Skill gaps to close: {insights.skillGaps.join(", ")}</p>
+              )}
+            </div>
+          )}
+
+          {!!insights.suggestedResources?.length && (
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-900">Suggested learning resources</p>
+              <div className="mt-2 space-y-2">
+                {insights.suggestedResources.map((resource) => (
+                  <a
+                    key={resource._id}
+                    href={resource.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-md border border-slate-200 px-3 py-2 text-sm text-brand-700 hover:bg-slate-50"
+                  >
+                    {resource.title} ({resource.type})
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="space-y-4">
         {roadmap.steps

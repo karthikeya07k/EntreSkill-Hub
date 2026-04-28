@@ -5,9 +5,18 @@ const MentorSession = require("../models/MentorSession");
 const Feedback = require("../models/Feedback");
 const BusinessIdea = require("../models/BusinessIdea");
 const Roadmap = require("../models/Roadmap");
+const CourseTrack = require("../models/CourseTrack");
 
 const verifyMentorValidation = [
-  body("mentorVerified").isBoolean().withMessage("mentorVerified must be true or false.")
+  body("status").isIn(["approved", "rejected"]).withMessage("status must be approved or rejected."),
+  body("reviewNote")
+    .optional()
+    .isLength({ min: 5, max: 800 })
+    .withMessage("reviewNote must be 5-800 characters."),
+  body("rejectionReason")
+    .optional()
+    .isLength({ min: 5, max: 800 })
+    .withMessage("rejectionReason must be 5-800 characters.")
 ];
 
 const getUsers = async (req, res, next) => {
@@ -21,19 +30,27 @@ const getUsers = async (req, res, next) => {
 
 const updateMentorVerification = async (req, res, next) => {
   try {
-    const { mentorVerified } = req.body;
-    const mentor = await User.findOneAndUpdate(
-      { _id: req.params.userId, role: "mentor" },
-      { mentorVerified },
-      { new: true }
-    ).select("-password");
+    const { status, reviewNote = "", rejectionReason = "" } = req.body;
+    const mentor = await User.findOne({ _id: req.params.userId, role: "mentor" }).select("-password");
 
     if (!mentor) {
       return res.status(404).json({ message: "Mentor not found." });
     }
 
+    mentor.mentorApplicationStatus = status;
+    mentor.mentorVerified = status === "approved";
+    mentor.mentorApplication = {
+      ...(mentor.mentorApplication || {}),
+      reviewedAt: new Date(),
+      reviewedBy: req.user._id,
+      approvalNote: status === "approved" ? reviewNote : "",
+      rejectionReason: status === "rejected" ? rejectionReason : ""
+    };
+
+    await mentor.save();
+
     return res.json({
-      message: `Mentor ${mentorVerified ? "verified" : "unverified"} successfully.`,
+      message: `Mentor application ${status}.`,
       mentor
     });
   } catch (error) {
@@ -41,15 +58,47 @@ const updateMentorVerification = async (req, res, next) => {
   }
 };
 
+const getMentorApplications = async (req, res, next) => {
+  try {
+    const { status = "pending" } = req.query;
+    const query = {
+      role: "mentor",
+      mentorApplicationStatus: status === "all" ? { $in: ["pending", "approved", "rejected"] } : status
+    };
+
+    const mentors = await User.find(query)
+      .select("-password")
+      .populate("mentorApplication.reviewedBy", "name email")
+      .sort({ "mentorApplication.submittedAt": -1, createdAt: -1 });
+
+    return res.json({ mentors });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getAdminStats = async (req, res, next) => {
   try {
-    const [usersCount, mentorsCount, verifiedMentorsCount, ideaCount, roadmapCount, pendingResources, sessionsCount, feedbackCount] =
+    const [
+      usersCount,
+      mentorsCount,
+      verifiedMentorsCount,
+      pendingMentorApplications,
+      ideaCount,
+      roadmapCount,
+      courseTrackCount,
+      pendingResources,
+      sessionsCount,
+      feedbackCount
+    ] =
       await Promise.all([
         User.countDocuments({ role: "user" }),
         User.countDocuments({ role: "mentor" }),
         User.countDocuments({ role: "mentor", mentorVerified: true }),
+        User.countDocuments({ role: "mentor", mentorApplicationStatus: "pending" }),
         BusinessIdea.countDocuments(),
         Roadmap.countDocuments(),
+        CourseTrack.countDocuments(),
         LearningResource.countDocuments({ status: "pending" }),
         MentorSession.countDocuments(),
         Feedback.countDocuments()
@@ -59,8 +108,10 @@ const getAdminStats = async (req, res, next) => {
       usersCount,
       mentorsCount,
       verifiedMentorsCount,
+      pendingMentorApplications,
       ideaCount,
       roadmapCount,
+      courseTrackCount,
       pendingResources,
       sessionsCount,
       feedbackCount
@@ -81,6 +132,7 @@ const getPlatformFeedback = async (req, res, next) => {
 
 module.exports = {
   getAdminStats,
+  getMentorApplications,
   getPlatformFeedback,
   getUsers,
   updateMentorVerification,

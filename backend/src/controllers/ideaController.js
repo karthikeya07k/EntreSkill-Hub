@@ -30,7 +30,7 @@ const getIdeas = async (req, res, next) => {
       ];
     }
 
-    const ideas = await BusinessIdea.find(query).sort({ createdAt: -1 });
+    const ideas = await BusinessIdea.find(query).sort({ createdAt: -1 }).lean();
     return res.json({ ideas });
   } catch (error) {
     return next(error);

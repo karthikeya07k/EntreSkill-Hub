@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -8,17 +8,32 @@ const DashboardPage = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [courseProgress, setCourseProgress] = useState([]);
+  const [recommendedTracks, setRecommendedTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedbackForm, setFeedbackForm] = useState({ rating: 5, comment: "", type: "platform" });
   const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  const roleTitle = useMemo(() => {
+    if (user?.role === "admin") return "Platform control center";
+    if (user?.role === "mentor") return "Mentor operations workspace";
+    return "Entrepreneur execution dashboard";
+  }, [user?.role]);
 
   useEffect(() => {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const [statsRes, profileRes] = await Promise.all([api.get("/users/dashboard"), api.get("/users/profile")]);
+        const [statsRes, profileRes, courseProgressRes, recommendedTracksRes] = await Promise.all([
+          api.get("/users/dashboard"),
+          api.get("/users/profile"),
+          api.get("/courses/progress/me"),
+          api.get("/courses/tracks/recommended")
+        ]);
         setStats(statsRes.data);
         setProfile(profileRes.data.user);
+        setCourseProgress(courseProgressRes.data.progress || []);
+        setRecommendedTracks(recommendedTracksRes.data.tracks || []);
       } catch (error) {
         console.error(error);
       } finally {
@@ -48,9 +63,18 @@ const DashboardPage = () => {
     <section className="space-y-6">
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900">Welcome, {profile?.name || user?.name}</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Track your startup progress and continue building your business roadmap with confidence.
-        </p>
+        <p className="mt-1 text-sm font-semibold text-brand-700 capitalize">{roleTitle}</p>
+        <p className="mt-2 text-sm text-slate-600">Track your startup progress and continue execution with confidence.</p>
+        {profile?.mentorApplicationStatus === "pending" && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Your mentor application is under admin review.
+          </p>
+        )}
+        {profile?.mentorApplicationStatus === "rejected" && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+            Mentor application requires updates. You can re-apply from the “Become Mentor” page.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -97,6 +121,11 @@ const DashboardPage = () => {
             <Link to="/mentors" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium">
               Connect with Verified Mentors
             </Link>
+            {user?.role === "user" && profile?.mentorApplicationStatus !== "approved" && (
+              <Link to="/mentor-apply" className="rounded-lg border border-brand-300 px-4 py-3 text-sm font-medium">
+                Apply as Mentor
+              </Link>
+            )}
             {user?.role === "mentor" && (
               <Link to="/mentor" className="rounded-lg bg-brand-700 px-4 py-3 text-sm font-semibold text-white">
                 Open Mentor Dashboard
@@ -153,6 +182,44 @@ const DashboardPage = () => {
           </form>
 
           {feedbackMessage && <p className="mt-3 text-sm text-slate-600">{feedbackMessage}</p>}
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Learning Tracks in Progress</h2>
+          <div className="mt-4 space-y-3">
+            {courseProgress.length ? (
+              courseProgress.slice(0, 4).map((item) => (
+                <article key={item._id} className="rounded-lg border border-slate-200 p-3">
+                  <p className="font-medium text-slate-900">{item.track?.title || "Track"}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Completion: {item.completionPercent}% | Last lesson: {item.lastLessonId || "Not started"}
+                  </p>
+                </article>
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">No learning track started yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Recommended Learning</h2>
+          <div className="mt-4 space-y-3">
+            {recommendedTracks.length ? (
+              recommendedTracks.slice(0, 4).map((track) => (
+                <article key={track._id} className="rounded-lg border border-slate-200 p-3">
+                  <p className="font-medium text-slate-900">{track.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Level: {track.level} | Modules: {track.modules?.length || 0}
+                  </p>
+                  <Link to="/resources" className="mt-2 inline-block text-sm font-semibold text-brand-700">
+                    Open in Learning Hub
+                  </Link>
+                </article>
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">No recommendations yet. Complete your skills profile.</p>
+            )}
+          </div>
         </div>
       </div>
     </section>

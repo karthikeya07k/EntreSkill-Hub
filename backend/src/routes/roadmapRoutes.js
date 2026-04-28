@@ -4,6 +4,7 @@ const {
   createRoadmapValidation,
   getRoadmapById,
   getRoadmapByIdea,
+  getRoadmapInsights,
   updateRoadmap,
   updateRoadmapProgress,
   updateProgressValidation
@@ -16,6 +17,7 @@ const router = express.Router();
 
 router.get("/idea/:ideaId", getRoadmapByIdea);
 router.get("/:id", getRoadmapById);
+router.get("/:roadmapId/insights", protect, getRoadmapInsights);
 router.post("/", protect, authorizeRoles("admin"), createRoadmapValidation, validate, createRoadmap);
 router.put("/:id", protect, authorizeRoles("admin"), updateRoadmap);
 router.patch("/:roadmapId/progress", protect, updateProgressValidation, validate, updateRoadmapProgress);

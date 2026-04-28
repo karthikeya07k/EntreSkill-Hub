@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const { getCorsOptions } = require("./config/env");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -12,18 +13,18 @@ const mentorRoutes = require("./routes/mentorRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const metaRoutes = require("./routes/metaRoutes");
+const courseRoutes = require("./routes/courseRoutes");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
+const { cors: corsOptions } = getCorsOptions();
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173"
-  })
-);
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "500kb" }));
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -41,6 +42,7 @@ app.use("/api/mentors", mentorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/meta", metaRoutes);
+app.use("/api/courses", courseRoutes);
 
 app.use(errorHandler);
 

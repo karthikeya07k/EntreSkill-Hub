@@ -33,19 +33,43 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (payload) => {
     const { data } = await api.post("/auth/login", payload);
-    localStorage.setItem("entreskill_token", data.token);
-    setToken(data.token);
-    setUser(data.user);
-    connectSocket(data.token);
+    if (data.token) {
+      localStorage.setItem("entreskill_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      connectSocket(data.token);
+    }
     return data;
   };
 
   const register = async (payload) => {
     const { data } = await api.post("/auth/register", payload);
-    localStorage.setItem("entreskill_token", data.token);
-    setToken(data.token);
-    setUser(data.user);
-    connectSocket(data.token);
+    return data;
+  };
+
+  const verifyEmail = async (payload) => {
+    const { data } = await api.post("/auth/verify-email", payload);
+    if (data.token) {
+      localStorage.setItem("entreskill_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      connectSocket(data.token);
+    }
+    return data;
+  };
+
+  const resendVerification = async (payload) => {
+    const { data } = await api.post("/auth/resend-verification", payload);
+    return data;
+  };
+
+  const forgotPassword = async (payload) => {
+    const { data } = await api.post("/auth/forgot-password", payload);
+    return data;
+  };
+
+  const resetPassword = async (payload) => {
+    const { data } = await api.post("/auth/reset-password", payload);
     return data;
   };
 
@@ -69,6 +93,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        verifyEmail,
+        resendVerification,
+        forgotPassword,
+        resetPassword,
         logout,
         refreshUser
       }}

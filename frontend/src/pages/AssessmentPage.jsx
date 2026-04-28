@@ -11,7 +11,10 @@ const AssessmentPage = () => {
     location: "",
     bio: "",
     skills: [],
-    interests: []
+    interests: [],
+    expertise: [],
+    experienceYears: 0,
+    availability: ""
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -35,10 +38,17 @@ const AssessmentPage = () => {
           location: profile.location || "",
           bio: profile.bio || "",
           skills: profile.skills || [],
-          interests: profile.interests || []
+          interests: profile.interests || [],
+          expertise: profile.expertise || [],
+          experienceYears: profile.experienceYears || 0,
+          availability: profile.availability || ""
         });
       } catch (error) {
-        console.error(error);
+        setMessage(
+          error.response?.data?.message ||
+            error.message ||
+            "Unable to load skills/interests right now. Try again after backend wakes up."
+        );
       } finally {
         setLoading(false);
       }
@@ -56,7 +66,7 @@ const AssessmentPage = () => {
       await api.put("/users/profile", form);
       setMessage("Profile updated. Your recommendations are now refreshed.");
     } catch (error) {
-      setMessage(error.response?.data?.message || "Unable to update profile.");
+      setMessage(error.response?.data?.message || error.message || "Unable to update profile.");
     } finally {
       setSaving(false);
     }
@@ -72,6 +82,9 @@ const AssessmentPage = () => {
         <h1 className="text-2xl font-bold text-slate-900">Skill & Interest Assessment</h1>
         <p className="mt-2 text-sm text-slate-600">
           Build your profile so we can map your skills and interests to relevant business opportunities.
+        </p>
+        <p className="mt-2 text-xs text-slate-500">
+          Completion tip: add both core skills and goals for better recommendation accuracy.
         </p>
       </div>
 
@@ -108,8 +121,61 @@ const AssessmentPage = () => {
           />
         </div>
 
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Mentor Expertise (optional)</label>
+            <input
+              type="text"
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              placeholder="Comma separated (e.g., Tailoring, Sales)"
+              value={form.expertise.join(", ")}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  expertise: e.target.value
+                    .split(",")
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                }))
+              }
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Experience Years (optional)</label>
+            <input
+              type="number"
+              min={0}
+              max={60}
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              value={form.experienceYears}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  experienceYears: Number(e.target.value || 0)
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="mb-1 block text-sm font-medium text-slate-700">Availability (optional)</label>
+          <input
+            type="text"
+            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            value={form.availability}
+            onChange={(e) => setForm((prev) => ({ ...prev, availability: e.target.value }))}
+            placeholder="Weekdays 6 PM - 9 PM"
+          />
+        </div>
+
         <div className="mt-6">
           <h2 className="text-base font-semibold text-slate-900">Select Skills</h2>
+          {!skills.length && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Skills catalog is empty in your deployed DB. Run seed once for Atlas to enable recommendations.
+            </p>
+          )}
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {skills.map((skill) => (
               <label key={skill._id} className="flex items-center gap-2 rounded-md border border-slate-200 p-2 text-sm">
@@ -131,6 +197,11 @@ const AssessmentPage = () => {
 
         <div className="mt-6">
           <h2 className="text-base font-semibold text-slate-900">Select Interests</h2>
+          {!interests.length && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Interests catalog is empty in your deployed DB. Run seed once for Atlas to enable recommendations.
+            </p>
+          )}
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {interests.map((interest) => (
               <label
@@ -153,7 +224,11 @@ const AssessmentPage = () => {
           </div>
         </div>
 
-        {message && <p className="mt-4 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">{message}</p>}
+        {message && (
+          <p className="mt-4 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
 
         <button
           type="submit"

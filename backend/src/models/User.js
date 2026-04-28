@@ -1,6 +1,57 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+const mentorApplicationSchema = new mongoose.Schema(
+  {
+    motivation: {
+      type: String,
+      default: ""
+    },
+    experienceSummary: {
+      type: String,
+      default: ""
+    },
+    specialization: {
+      type: [String],
+      default: []
+    },
+    portfolioUrl: {
+      type: String,
+      default: ""
+    },
+    linkedinUrl: {
+      type: String,
+      default: ""
+    },
+    resumeUrl: {
+      type: String,
+      default: ""
+    },
+    submittedAt: {
+      type: Date,
+      default: null
+    },
+    reviewedAt: {
+      type: Date,
+      default: null
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    approvalNote: {
+      type: String,
+      default: ""
+    },
+    rejectionReason: {
+      type: String,
+      default: ""
+    }
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -14,6 +65,22 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    emailVerificationCodeHash: {
+      type: String,
+      default: ""
+    },
+    emailVerificationExpiresAt: {
+      type: Date,
+      default: null
+    },
+    emailVerificationAttempts: {
+      type: Number,
+      default: 0
     },
     password: {
       type: String,
@@ -49,6 +116,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    mentorApplicationStatus: {
+      type: String,
+      enum: ["not_applied", "pending", "approved", "rejected"],
+      default: "not_applied"
+    },
+    mentorApplication: {
+      type: mentorApplicationSchema,
+      default: () => ({})
+    },
     experienceYears: {
       type: Number,
       default: 0
@@ -56,6 +132,22 @@ const userSchema = new mongoose.Schema(
     availability: {
       type: String,
       default: "Weekdays"
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0
+    },
+    loginLockedUntil: {
+      type: Date,
+      default: null
+    },
+    passwordResetTokenHash: {
+      type: String,
+      default: ""
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      default: null
     },
     bookmarks: [
       {

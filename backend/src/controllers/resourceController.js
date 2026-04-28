@@ -37,6 +37,12 @@ const getApprovedResources = async (req, res, next) => {
 
 const createResource = async (req, res, next) => {
   try {
+    if (req.user.role === "mentor" && !req.user.mentorVerified) {
+      return res
+        .status(403)
+        .json({ message: "Your mentor profile is pending approval. Resource upload is enabled after approval." });
+    }
+
     const resource = await LearningResource.create({
       ...req.body,
       uploadedBy: req.user._id,

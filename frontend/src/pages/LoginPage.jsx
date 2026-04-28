@@ -8,6 +8,7 @@ const LoginPage = () => {
   const location = useLocation();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (user) return <Navigate to="/dashboard" replace />;
@@ -16,21 +17,38 @@ const LoginPage = () => {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
-      await login(form);
+      const data = await login(form);
+      if (data.emailVerificationRequired) {
+        navigate("/verify-email", {
+          state: { email: form.email, devVerificationCode: data.devVerificationCode || "" }
+        });
+        return;
+      }
       navigate(location.state?.from || "/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to log in.");
+      if (err.response?.data?.emailVerificationRequired) {
+        setMessage(err.response?.data?.message || "Verify your email first.");
+        navigate("/verify-email", {
+          state: {
+            email: form.email,
+            devVerificationCode: err.response?.data?.devVerificationCode || ""
+          }
+        });
+      } else {
+        setError(err.response?.data?.message || err.message || "Unable to log in.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="mx-auto max-w-lg rounded-2xl bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-      <p className="mt-1 text-sm text-slate-600">Login to continue your entrepreneurship roadmap.</p>
+    <section className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h1 className="text-3xl font-bold text-slate-900">Welcome back</h1>
+      <p className="mt-2 text-sm text-slate-600">Login to continue your entrepreneurship roadmap.</p>
 
       <form className="mt-6 space-y-4" onSubmit={submitHandler}>
         <div>
@@ -55,7 +73,17 @@ const LoginPage = () => {
           />
         </div>
 
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {message && (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">
+            {message}
+          </p>
+        )}
+
+        {error && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
@@ -66,12 +94,17 @@ const LoginPage = () => {
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-slate-600">
-        New here?{" "}
-        <Link to="/register" className="font-medium text-brand-700">
-          Create an account
+      <div className="mt-4 flex items-center justify-between gap-2 text-sm text-slate-600">
+        <p>
+          New here?{" "}
+          <Link to="/register" className="font-medium text-brand-700">
+            Create an account
+          </Link>
+        </p>
+        <Link to="/forgot-password" className="font-medium text-brand-700">
+          Forgot password?
         </Link>
-      </p>
+      </div>
     </section>
   );
 };

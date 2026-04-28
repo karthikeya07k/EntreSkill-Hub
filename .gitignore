@@ -12,3 +12,5 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 backend/uploads
+mongodb*.txt
+*connection-string*.txt
